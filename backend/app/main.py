@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from redis.asyncio import Redis
 
 from app.api.v1.router import api_router
@@ -31,6 +34,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
+    web_build_dir = Path(__file__).resolve().parents[2] / "apps" / "mobile" / "build" / "web"
 
     app.add_middleware(
         CORSMiddleware,
@@ -42,13 +46,23 @@ def create_app() -> FastAPI:
     )
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
+    if web_build_dir.exists():
+        app.mount("/app", StaticFiles(directory=web_build_dir, html=True), name="tms-web")
+
+        @app.get("/app")
+        async def app_root() -> RedirectResponse:
+            return RedirectResponse(url="/app/")
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok", "service": settings.app_name}
 
     @app.get("/")
     async def root() -> dict[str, str]:
-        return {"name": settings.app_name, "docs": "/docs", "health": "/health"}
+        payload = {"name": settings.app_name, "docs": "/docs", "health": "/health"}
+        if web_build_dir.exists():
+            payload["app"] = "/app/"
+        return payload
 
     return app
 
