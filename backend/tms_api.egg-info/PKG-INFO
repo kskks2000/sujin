@@ -1,0 +1,42 @@
+Metadata-Version: 2.4
+Name: tms-api
+Version: 0.1.0
+Summary: Pragmatic TMS backend aligned to the PostgreSQL schema.
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: asyncpg>=0.30.0
+Requires-Dist: fastapi[standard]>=0.116.1
+Requires-Dist: pydantic-settings>=2.8.1
+Requires-Dist: pwdlib[argon2]>=0.2.1
+Requires-Dist: psycopg[binary]>=3.2.6
+Requires-Dist: python-jose[cryptography]>=3.5.0
+Requires-Dist: redis>=5.2.1
+Requires-Dist: sqlalchemy>=2.0.38
+Provides-Extra: dev
+Requires-Dist: aiosqlite>=0.21.0; extra == "dev"
+Requires-Dist: httpx>=0.28.1; extra == "dev"
+Requires-Dist: pytest>=8.3.5; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.25.3; extra == "dev"
+Requires-Dist: ruff>=0.9.10; extra == "dev"
+
+# TMS Backend
+
+FastAPI backend for a TMS aligned to the PostgreSQL schema in `sql/001_initial_schema.sql`.
+
+## Run
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .[dev]
+uvicorn app.main:app --reload
+```
+
+## Helpers
+
+```bash
+python scripts/test_postgres_connection.py
+python scripts/apply_schema.py
+python scripts/seed_demo_data.py
+```

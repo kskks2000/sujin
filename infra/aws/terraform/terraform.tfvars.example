@@ -1,0 +1,7 @@
+aws_region    = "ap-northeast-2"
+name_prefix   = "sujin-tms"
+db_username   = "postgres"
+db_password   = "replace-me"
+desired_count = 2
+app_image     = "123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/sujin-tms-api:latest"
+

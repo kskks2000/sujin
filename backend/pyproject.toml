@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=75.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tms-api"
+version = "0.1.0"
+description = "Pragmatic TMS backend aligned to the PostgreSQL schema."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "asyncpg>=0.30.0",
+  "fastapi[standard]>=0.116.1",
+  "pydantic-settings>=2.8.1",
+  "pwdlib[argon2]>=0.2.1",
+  "psycopg[binary]>=3.2.6",
+  "python-jose[cryptography]>=3.5.0",
+  "redis>=5.2.1",
+  "sqlalchemy>=2.0.38",
+]
+
+[project.optional-dependencies]
+dev = [
+  "aiosqlite>=0.21.0",
+  "httpx>=0.28.1",
+  "pytest>=8.3.5",
+  "pytest-asyncio>=0.25.3",
+  "ruff>=0.9.10",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+

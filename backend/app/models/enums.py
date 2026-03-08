@@ -1,0 +1,84 @@
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class UserRole(StrEnum):
+    SUPER_ADMIN = "SUPER_ADMIN"
+    ADMIN = "ADMIN"
+    DISPATCHER = "DISPATCHER"
+    OPS = "OPS"
+    DRIVER = "DRIVER"
+    CS = "CS"
+    ACCOUNTING = "ACCOUNTING"
+    CUSTOMER = "CUSTOMER"
+
+
+class VehicleType(StrEnum):
+    CARGO_VAN = "CARGO_VAN"
+    BOX_TRUCK = "BOX_TRUCK"
+    WING_BODY = "WING_BODY"
+    TRACTOR = "TRACTOR"
+    TRAILER = "TRAILER"
+    REEFER = "REEFER"
+    FLATBED = "FLATBED"
+    TANKER = "TANKER"
+    ETC = "ETC"
+
+
+class DriverEmploymentType(StrEnum):
+    OWNER_OPERATOR = "OWNER_OPERATOR"
+    COMPANY_DRIVER = "COMPANY_DRIVER"
+    CONTRACTOR = "CONTRACTOR"
+
+
+class OrderStatus(StrEnum):
+    REQUESTED = "REQUESTED"
+    CONFIRMED = "CONFIRMED"
+    DISPATCHING = "DISPATCHING"
+    DISPATCHED = "DISPATCHED"
+    PICKUP_COMPLETED = "PICKUP_COMPLETED"
+    IN_TRANSIT = "IN_TRANSIT"
+    DELIVERED = "DELIVERED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class DispatchStatus(StrEnum):
+    ASSIGNED = "ASSIGNED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    ENROUTE_PICKUP = "ENROUTE_PICKUP"
+    AT_PICKUP = "AT_PICKUP"
+    LOADED = "LOADED"
+    IN_TRANSIT = "IN_TRANSIT"
+    AT_DELIVERY = "AT_DELIVERY"
+    POD_UPLOADED = "POD_UPLOADED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class StopType(StrEnum):
+    PICKUP = "PICKUP"
+    DROPOFF = "DROPOFF"
+    WAYPOINT = "WAYPOINT"
+    RETURN = "RETURN"
+
+
+class LocationType(StrEnum):
+    CUSTOMER_SITE = "CUSTOMER_SITE"
+    WAREHOUSE = "WAREHOUSE"
+    HUB = "HUB"
+    FACTORY = "FACTORY"
+    PORT = "PORT"
+    ETC = "ETC"
+
+
+class ServiceType(StrEnum):
+    FTL = "FTL"
+    LTL = "LTL"
+    EXPRESS = "EXPRESS"
+    RETURN = "RETURN"
+    TRANSFER = "TRANSFER"
+    DISTRIBUTION = "DISTRIBUTION"
+

@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+backend/.env
+backend/.venv/
+.pytest_cache/
+.ruff_cache/
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.idea/
+apps/mobile/android/local.properties
+backend/scripts/__pycache__/
