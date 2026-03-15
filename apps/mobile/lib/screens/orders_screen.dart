@@ -3,6 +3,7 @@ import 'package:tms_mobile/core/formatters/tms_labels.dart';
 import 'package:tms_mobile/core/network/tms_api_client.dart';
 import 'package:tms_mobile/core/theme/app_theme.dart';
 import 'package:tms_mobile/models/order_item.dart';
+import 'package:tms_mobile/screens/order_create_screen.dart';
 import 'package:tms_mobile/widgets/tms_ui.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -31,6 +32,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
     await next;
   }
 
+  Future<void> _openCreateOrder() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => OrderCreateScreen(client: widget.client),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (created != true || !mounted) {
+      return;
+    }
+
+    await _refresh();
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('오더가 등록되었습니다.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<OrderItem>>(
@@ -47,9 +70,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         }
 
         final orders = snapshot.data!;
-        final scheduledCount = orders.where((order) => order.serviceDate != null).length;
         final activeCount = orders
-            .where((order) => order.status != 'COMPLETED' && order.status != 'CANCELLED')
+            .where(
+              (order) =>
+                  order.status != 'COMPLETED' && order.status != 'CANCELLED',
+            )
+            .length;
+        final scheduledCount = orders
+            .where((order) => order.serviceDate != null)
+            .length;
+        final completedCount = orders
+            .where((order) => order.status == 'COMPLETED')
             .length;
 
         return PageReveal(
@@ -65,53 +96,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                   children: [
-                    AppSurface(
-                      padding: const EdgeInsets.all(22),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFFEF7EE),
-                          Color(0xFFF4EEE4),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SectionHeading(
-                            title: '오더 데스크',
-                            subtitle:
-                                '운행일, 상하차 정보, 청구 주체를 한 화면에서 관리합니다.',
-                            trailing: DetailChip(
-                              label: '${orders.length}건',
-                              icon: Icons.inventory_2_rounded,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              DetailChip(
-                                label: '진행 $activeCount건',
-                                icon: Icons.route_rounded,
-                              ),
-                              DetailChip(
-                                label: '운행일 지정 $scheduledCount건',
-                                icon: Icons.calendar_month_rounded,
-                              ),
-                              DetailChip(
-                                label: '청구 정보 표시',
-                                icon: Icons.account_balance_wallet_rounded,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    _OrdersOverview(
+                      totalCount: orders.length,
+                      activeCount: activeCount,
+                      scheduledCount: scheduledCount,
+                      completedCount: completedCount,
+                      onCreateOrder: _openCreateOrder,
                     ),
                     const SizedBox(height: 18),
                     if (orders.isEmpty)
-                      const _EmptyOrders()
+                      _EmptyOrders(onCreateOrder: _openCreateOrder)
                     else
                       Wrap(
                         spacing: 12,
@@ -136,6 +130,100 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 }
 
+class _OrdersOverview extends StatelessWidget {
+  const _OrdersOverview({
+    required this.totalCount,
+    required this.activeCount,
+    required this.scheduledCount,
+    required this.completedCount,
+    required this.onCreateOrder,
+  });
+
+  final int totalCount;
+  final int activeCount;
+  final int scheduledCount;
+  final int completedCount;
+  final VoidCallback onCreateOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSurface(
+      padding: const EdgeInsets.all(22),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFEF7EE), Color(0xFFF4EEE4)],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 720;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isNarrow) ...[
+                const SectionHeading(
+                  title: '오더 데스크',
+                  subtitle: '접수, 경로, 청구 기준을 확인하고 신규 오더를 바로 등록합니다.',
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onCreateOrder,
+                    icon: const Icon(Icons.add_task_rounded),
+                    label: const Text('신규 오더 등록'),
+                  ),
+                ),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: SectionHeading(
+                        title: '오더 데스크',
+                        subtitle: '접수, 경로, 청구 기준을 확인하고 신규 오더를 바로 등록합니다.',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: onCreateOrder,
+                      icon: const Icon(Icons.add_task_rounded),
+                      label: const Text('신규 오더 등록'),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  DetailChip(
+                    label: '전체 $totalCount건',
+                    icon: Icons.inventory_2_rounded,
+                  ),
+                  DetailChip(
+                    label: '진행 $activeCount건',
+                    icon: Icons.route_rounded,
+                  ),
+                  DetailChip(
+                    label: '일정 확정 $scheduledCount건',
+                    icon: Icons.calendar_month_rounded,
+                  ),
+                  DetailChip(
+                    label: '완료 $completedCount건',
+                    icon: Icons.task_alt_rounded,
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order});
 
@@ -156,13 +244,16 @@ class _OrderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(order.orderNo, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      order.orderNo,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       order.billToCompanyName,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.ink,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppColors.ink),
                     ),
                   ],
                 ),
@@ -185,15 +276,15 @@ class _OrderCard extends StatelessWidget {
                 _RouteRow(
                   icon: Icons.trip_origin_rounded,
                   color: AppColors.teal,
-                  label: '상차',
-                  value: order.pickupName ?? '미지정',
+                  label: '상차지',
+                  value: order.pickupName ?? '미정',
                 ),
                 const SizedBox(height: 10),
                 _RouteRow(
                   icon: Icons.flag_rounded,
                   color: AppColors.clay,
-                  label: '하차',
-                  value: order.deliveryName ?? '미지정',
+                  label: '하차지',
+                  value: order.deliveryName ?? '미정',
                 ),
               ],
             ),
@@ -206,26 +297,31 @@ class _OrderCard extends StatelessWidget {
               DetailChip(
                 label: order.shipperName ?? '화주 미지정',
                 icon: Icons.outbox_rounded,
+                dense: true,
               ),
               DetailChip(
-                label: order.consigneeName ?? '수화인 미지정',
+                label: order.consigneeName ?? '수령처 미지정',
                 icon: Icons.move_to_inbox_rounded,
+                dense: true,
               ),
               DetailChip(
-                label: order.cargoName ?? '화물 미입력',
+                label: order.cargoName ?? '화물명 미입력',
                 icon: Icons.inventory_rounded,
+                dense: true,
               ),
               DetailChip(
                 label: order.cargoWeightKg != null
                     ? '${order.cargoWeightKg!.toStringAsFixed(0)} kg'
                     : '중량 미입력',
                 icon: Icons.scale_rounded,
+                dense: true,
               ),
               DetailChip(
                 label: order.serviceDate != null
                     ? formatKoreanDate(order.serviceDate!)
-                    : '운행일 미지정',
+                    : '서비스 일자 미정',
                 icon: Icons.calendar_month_rounded,
+                dense: true,
               ),
             ],
           ),
@@ -271,9 +367,9 @@ class _RouteRow extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.ink,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.ink),
               ),
             ],
           ),
@@ -284,7 +380,9 @@ class _RouteRow extends StatelessWidget {
 }
 
 class _EmptyOrders extends StatelessWidget {
-  const _EmptyOrders();
+  const _EmptyOrders({required this.onCreateOrder});
+
+  final VoidCallback onCreateOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -297,11 +395,21 @@ class _EmptyOrders extends StatelessWidget {
             color: AppColors.teal.withValues(alpha: 0.8),
           ),
           const SizedBox(height: 12),
-          Text('등록된 오더가 없습니다', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            '등록된 오더가 없습니다.',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 6),
           Text(
-            '데모 데이터를 넣거나 새 오더를 등록하면 이 보드가 채워집니다.',
+            '신규 오더를 등록하면 여기에서 운송 조건과 상하차 정보를 함께 볼 수 있습니다.',
             style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: onCreateOrder,
+            icon: const Icon(Icons.add_task_rounded),
+            label: const Text('첫 오더 등록'),
           ),
         ],
       ),
@@ -310,10 +418,7 @@ class _EmptyOrders extends StatelessWidget {
 }
 
 class _OrdersErrorState extends StatelessWidget {
-  const _OrdersErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _OrdersErrorState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -327,7 +432,10 @@ class _OrdersErrorState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('오더 화면을 불러올 수 없습니다', style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                '오더 화면을 불러오지 못했습니다.',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: 12),
               Text(
                 message,

@@ -8,10 +8,11 @@ import 'package:tms_mobile/widgets/tms_ui.dart';
 
 String _resolveDefaultBaseUrl() {
   if (kIsWeb) {
-    final host = Uri.base.host;
-    if (host.isNotEmpty && host != 'localhost' && host != '127.0.0.1') {
-      final scheme = Uri.base.scheme == 'https' ? 'https' : 'http';
-      return '$scheme://$host:8000/api/v1';
+    final current = Uri.base;
+    final host = current.host;
+    final isRemoteHost = host.isNotEmpty && host != 'localhost' && host != '127.0.0.1';
+    if (isRemoteHost) {
+      return '${current.origin}/api/v1';
     }
   }
   return 'http://localhost:8000/api/v1';
@@ -35,6 +36,22 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  bool get _usesLockedRemoteApi {
+    if (!kIsWeb) {
+      return false;
+    }
+
+    final host = Uri.base.host;
+    return host.isNotEmpty && host != 'localhost' && host != '127.0.0.1';
+  }
+
+  String get _effectiveBaseUrl {
+    if (_usesLockedRemoteApi) {
+      return _resolveDefaultBaseUrl();
+    }
+    return _baseUrlController.text.trim();
+  }
+
   @override
   void dispose() {
     _baseUrlController.dispose();
@@ -55,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final session = await widget.client.login(
-        baseUrl: _baseUrlController.text.trim(),
+        baseUrl: _effectiveBaseUrl,
         loginId: _loginIdController.text.trim(),
         password: _passwordController.text,
       );
@@ -93,9 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Expanded(
                               flex: 6,
-                              child: _StoryPanel(
-                                baseUrl: _baseUrlController.text.trim(),
-                              ),
+                              child: _StoryPanel(baseUrl: _effectiveBaseUrl),
                             ),
                             const SizedBox(width: 18),
                             Expanded(
@@ -103,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: _LoginPanel(
                                 formKey: _formKey,
                                 baseUrlController: _baseUrlController,
+                                baseUrlLocked: _usesLockedRemoteApi,
                                 loginIdController: _loginIdController,
                                 passwordController: _passwordController,
                                 isSubmitting: _isSubmitting,
@@ -114,13 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         )
                       : Column(
                           children: [
-                            _StoryPanel(
-                              baseUrl: _baseUrlController.text.trim(),
-                            ),
+                            _StoryPanel(baseUrl: _effectiveBaseUrl),
                             const SizedBox(height: 18),
                             _LoginPanel(
                               formKey: _formKey,
                               baseUrlController: _baseUrlController,
+                              baseUrlLocked: _usesLockedRemoteApi,
                               loginIdController: _loginIdController,
                               passwordController: _passwordController,
                               isSubmitting: _isSubmitting,
@@ -173,7 +188,7 @@ class _StoryPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: const Text(
-              '프리미엄 운영 데스크',
+              '프리미엄 운영 경험',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -183,7 +198,7 @@ class _StoryPanel extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            '배차, 오더, 이동 흐름을 한 화면에서 조율하는 프리미엄 운송 관제실입니다.',
+            '배차, 오더, 차량 흐름을\n한 화면에서 관리합니다.',
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
               color: AppColors.midnight,
               fontSize: 38,
@@ -192,7 +207,7 @@ class _StoryPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'SJ 브랜드 플레이트를 중심으로 전체 화면을 민트 메탈과 골드 포인트 톤으로 정리해, 로그인부터 운영 화면까지 같은 분위기로 이어지도록 만들었습니다.',
+            '모바일에서도 관제 흐름이 자연스럽게 이어지도록, 공개 접속 주소와 운영 API를 같은 기준으로 맞춰두었습니다.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: AppColors.midnight.withValues(alpha: 0.76),
             ),
@@ -204,17 +219,17 @@ class _StoryPanel extends StatelessWidget {
             children: const [
               _SignalTile(
                 label: '오더 흐름',
-                value: '프리미엄',
+                value: '실시간',
                 icon: Icons.inventory_2_rounded,
               ),
               _SignalTile(
                 label: '차량 관제',
-                value: '실시간',
+                value: '모바일',
                 icon: Icons.route_rounded,
               ),
               _SignalTile(
-                label: '브랜드 톤',
-                value: '일체화',
+                label: '브랜드 경험',
+                value: '일관성',
                 icon: Icons.query_stats_rounded,
               ),
             ],
@@ -223,7 +238,7 @@ class _StoryPanel extends StatelessWidget {
           Divider(color: AppColors.midnight.withValues(alpha: 0.18)),
           const SizedBox(height: 18),
           Text(
-            '로컬 API 대상',
+            '현재 연결된 API',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: AppColors.midnight.withValues(alpha: 0.64),
             ),
@@ -245,6 +260,7 @@ class _LoginPanel extends StatelessWidget {
   const _LoginPanel({
     required this.formKey,
     required this.baseUrlController,
+    required this.baseUrlLocked,
     required this.loginIdController,
     required this.passwordController,
     required this.isSubmitting,
@@ -254,6 +270,7 @@ class _LoginPanel extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final TextEditingController baseUrlController;
+  final bool baseUrlLocked;
   final TextEditingController loginIdController;
   final TextEditingController passwordController;
   final bool isSubmitting;
@@ -295,12 +312,15 @@ class _LoginPanel extends StatelessWidget {
             const SizedBox(height: 22),
             TextFormField(
               controller: baseUrlController,
-              decoration: const InputDecoration(
+              readOnly: baseUrlLocked,
+              decoration: InputDecoration(
                 labelText: 'API 기본 URL',
-                prefixIcon: Icon(Icons.link_rounded),
+                prefixIcon: const Icon(Icons.link_rounded),
+                helperText: baseUrlLocked
+                    ? '현재 접속 주소에 맞게 자동으로 고정됩니다.'
+                    : '로컬 개발 시 직접 수정할 수 있습니다.',
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
+              validator: (value) => value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -309,8 +329,7 @@ class _LoginPanel extends StatelessWidget {
                 labelText: '로그인 ID',
                 prefixIcon: Icon(Icons.person_rounded),
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
+              validator: (value) => value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -320,8 +339,7 @@ class _LoginPanel extends StatelessWidget {
                 labelText: '비밀번호',
                 prefixIcon: Icon(Icons.lock_rounded),
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
+              validator: (value) => value == null || value.isEmpty ? '필수 입력 항목입니다.' : null,
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: 14),

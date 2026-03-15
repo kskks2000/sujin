@@ -2,15 +2,26 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import time_ns
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 from redis.asyncio import Redis
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+
+
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
 
 @asynccontextmanager
@@ -44,14 +55,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
     if web_build_dir.exists():
-        app.mount("/app", StaticFiles(directory=web_build_dir, html=True), name="tms-web")
+        app.mount("/app", NoCacheStaticFiles(directory=web_build_dir, html=True), name="tms-web")
 
         @app.get("/app")
         async def app_root() -> RedirectResponse:
             return RedirectResponse(url="/app/")
+
+        @app.get("/mobile")
+        async def mobile_root() -> RedirectResponse:
+            response = RedirectResponse(url=f"/app/?v={time_ns()}")
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            return response
 
     @app.get("/health")
     async def health() -> dict[str, str]:

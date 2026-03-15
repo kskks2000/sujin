@@ -64,9 +64,9 @@ String localizeStatus(String status) {
     case 'INVOICED':
       return '청구 완료';
     case 'PARTIALLY_PAID':
-      return '부분 수금';
+      return '부분 입금';
     case 'PAID':
-      return '수금 완료';
+      return '입금 완료';
     default:
       return status;
   }
@@ -84,8 +84,8 @@ String localizeErrorMessage(Object error) {
   if (message.contains('Connection refused')) {
     return 'API 서버 연결이 거부되었습니다. 서버가 실행 중인지 확인해 주세요.';
   }
-  if (message.contains('timed out')) {
-    return '서버 응답 시간이 초과되었습니다.';
+  if (message.contains('TimeoutException') || message.contains('timed out')) {
+    return 'API 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.';
   }
   return message;
 }

@@ -3,13 +3,17 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:tms_mobile/models/company_option.dart';
 import 'package:tms_mobile/models/dashboard_summary.dart';
 import 'package:tms_mobile/models/dispatch_item.dart';
+import 'package:tms_mobile/models/order_create_request.dart';
 import 'package:tms_mobile/models/order_item.dart';
 import 'package:tms_mobile/models/session.dart';
 
 class TmsApiClient {
   TmsApiClient({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
+
+  static const _requestTimeout = Duration(seconds: 30);
 
   final http.Client _httpClient;
   String _baseUrl = const String.fromEnvironment(
@@ -35,7 +39,7 @@ class TmsApiClient {
           headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
           body: jsonEncode({'login_id': loginId, 'password': password}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(_requestTimeout);
 
     if (response.statusCode != 200) {
       throw Exception('Login failed (${response.statusCode})');
@@ -57,6 +61,19 @@ class TmsApiClient {
     return _asList(response.body).map(OrderItem.fromJson).toList();
   }
 
+  Future<List<CompanyOption>> fetchCompanies() async {
+    final response = await _get('/companies');
+    return _asList(response.body).map(CompanyOption.fromJson).toList();
+  }
+
+  Future<void> createOrder(OrderCreateRequest payload) async {
+    final response = await _post('/orders', payload.toJson());
+
+    if (response.statusCode != 201) {
+      throw Exception('Order create failed (${response.statusCode})');
+    }
+  }
+
   Future<List<DispatchItem>> fetchDispatches() async {
     final response = await _get('/dispatches');
     return _asList(response.body).map(DispatchItem.fromJson).toList();
@@ -71,7 +88,21 @@ class TmsApiClient {
             if (_token != null) 'Authorization': 'Bearer $_token',
           },
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(_requestTimeout);
+  }
+
+  Future<http.Response> _post(String path, Map<String, dynamic> payload) {
+    return _httpClient
+        .post(
+          Uri.parse('$_baseUrl$path'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (_token != null) 'Authorization': 'Bearer $_token',
+          },
+          body: jsonEncode(payload),
+        )
+        .timeout(_requestTimeout);
   }
 
   Map<String, dynamic> _asMap(String rawBody) {
@@ -92,17 +123,15 @@ class TmsApiClient {
 
     var normalized = parsed;
     if (kIsWeb) {
-      final currentHost = Uri.base.host;
+      final current = Uri.base;
+      final currentHost = current.host;
       final isCurrentHostRemote =
           currentHost.isNotEmpty && currentHost != 'localhost' && currentHost != '127.0.0.1';
       final isLocalTarget = parsed.host == 'localhost' || parsed.host == '127.0.0.1';
+      final isCurrentHostTarget = parsed.host == currentHost;
 
-      if (isCurrentHostRemote && isLocalTarget) {
-        normalized = normalized.replace(
-          scheme: Uri.base.scheme == 'https' ? 'https' : 'http',
-          host: currentHost,
-          port: parsed.hasPort ? parsed.port : 8000,
-        );
+      if (isCurrentHostRemote && (isLocalTarget || isCurrentHostTarget)) {
+        normalized = Uri.parse('${current.origin}/api/v1');
       }
     }
 

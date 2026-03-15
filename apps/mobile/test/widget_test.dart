@@ -9,6 +9,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TmsLogo), findsWidgets);
-    expect(find.widgetWithText(FilledButton, '대시보드 입장'), findsOneWidget);
+    expect(find.byType(FilledButton), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(3));
   });
 }
